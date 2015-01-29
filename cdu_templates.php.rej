@@ -1,0 +1,16 @@
+--- cdu_templates.php
++++ cdu_templates.php
+@@ -1,10 +1,10 @@
+ <?php
+-	require_once('db.inc.php');
+-	require_once('facilities.inc.php');
++	require_once("db.inc.php");
++	require_once("facilities.inc.php");
+ 
+ 	$subheader=__("Data Center Cabinet Distribution Unit Templates");
+ 
+-	if(!$person->SiteAdmin){
++	if(!$user->SiteAdmin){
+ 		// No soup for you.
+ 		header('Location: '.redirect());
+ 		exit;

@@ -36,9 +36,7 @@
 		$template->Voltage = $_REQUEST["voltage"];
 		$template->Amperage = $_REQUEST["amperage"];
 		$template->NumOutlets = $_REQUEST["numoutlets"];
-                $template->discretePowerForPorts = isset($_REQUEST['DiscretePowerForPorts'])?1:0;
-                $template->powerOID = $_REQUEST['PowerOID'];
-                
+
 		if ( $_REQUEST['action']=='Create' ) {
 			$template->CreateTemplate();
 		} else {
@@ -182,16 +180,6 @@ echo '   </select>
 <div>
    <div><label for="atsdesiredresult">',__("ATS Desired Result"),'</label></div>
    <div><input type="text" name="atsdesiredresult" id="atsdesiredresult" value="',$template->ATSDesiredResult,'" size=40></div>
-</div>
-<div>
-   <div><label for="discretePowerForPorts">',__("Discrete Power OID for Ports"),'</label></div>
-   <div>
-		<input type="checkbox" name="discretePowerForPorts" id="discretePowerForPorts"',$template->DiscretePowerForPorts,'>
-   </div>
-</div>
-<div>
-	<div><label for="powerOID">',__("OID For Discrete Power per Port"),'</label></div>
-	<div><input type="text" name="powerOID" id="powerOID" value="',$template->PowerOID,'" size=40></div>
 </div>
 <div>
    <div><label for="processingprofile">',__("Processing Scheme"),'</label></div>

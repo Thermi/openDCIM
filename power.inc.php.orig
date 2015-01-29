@@ -41,9 +41,7 @@ class CDUTemplate {
 	var $Voltage;
 	var $Amperage;
 	var $NumOutlets;
-        var $DiscretePowerForPorts;
-        var $PowerOID;
-        
+
 	function MakeSafe(){
 		$validSNMPVersions=array(1,'2c');
 		$validMultipliers=array(0.1,1,10,100);
@@ -67,8 +65,6 @@ class CDUTemplate {
 		$this->Voltage=intval($this->Voltage);
 		$this->Amperage=intval($this->Amperage);
 		$this->NumOutlets=intval($this->NumOutlets);
-                $this->DiscretePowerForPorts=intval($this->DiscretePowerForPorts);
-                $this->PowerOID=sanitize($this->PowerOID);
 	}
 
 	function MakeDisplay(){
@@ -79,7 +75,6 @@ class CDUTemplate {
 		$this->OID3=stripslashes($this->OID3);
 		$this->ATSStatusOID=stripslashes($this->ATSStatusOID);
 		$this->ATSDesiredResult=stripslashes($this->ATSDesiredResult);
-                $this->PowerOID=stripslashes($this->PowerOID);
 	}
 
 	static function RowToObject($row){
@@ -101,8 +96,6 @@ class CDUTemplate {
 		$template->Voltage=$row["Voltage"];
 		$template->Amperage=$row["Amperage"];
 		$template->NumOutlets=$row["NumOutlets"];
-                $template->DiscretePowerForPorts=$row["DiscretePowerForPorts"];
-                $template->PowerOID=$row["PowerOID"];
 
 		$template->MakeDisplay();
 
@@ -127,7 +120,7 @@ class CDUTemplate {
 		global $dbh;
 
 		$this->MakeSafe();
-                
+		
 		$sql="SELECT * FROM fac_CDUTemplate WHERE TemplateID=$this->TemplateID";
 
 		foreach($dbh->query($sql) as $row){
@@ -171,15 +164,15 @@ class CDUTemplate {
 		$oldtemplate=new CDUTemplate();
 		$oldtemplate->TemplateID=$this->TemplateID;
 		$oldtemplate->GetTemplate();
-                
+		
 		$sql="UPDATE fac_CDUTemplate SET ManufacturerID=$this->ManufacturerID, 
 			Model=\"$this->Model\", Managed=$this->Managed, ATS=$this->ATS,
 			SNMPVersion=\"$this->SNMPVersion\", VersionOID=\"$this->VersionOID\", 
 			Multiplier=\"$this->Multiplier\", OID1=\"$this->OID1\", OID2=\"$this->OID2\", 
 			OID3=\"$this->OID3\", ATSStatusOID=\"$this->ATSStatusOID\", ATSDesiredResult=\"$this->ATSDesiredResult\",
 			ProcessingProfile=\"$this->ProcessingProfile\", 
-			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets, DiscretePowerForPorts=$this->DiscretePowerForPorts,
-                        PowerOID=$this->PowerOID WHERE TemplateID=$this->TemplateID;";
+			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets
+			WHERE TemplateID=$this->TemplateID;";
 		
 		if(!$dbh->query($sql)){
 			return false;
@@ -197,7 +190,7 @@ class CDUTemplate {
 		// First step is to clear any power strips referencing this template
 		$sql="UPDATE fac_PowerDistribution SET CDUTemplateID=0 WHERE TemplateID=$this->TemplateID;";
 		$dbh->query($sql);
-
+		
 		$sql="DELETE FROM fac_CDUTemplate WHERE TemplateID=$this->TemplateID;";
 		$dbh->exec($sql);
 		
@@ -364,7 +357,7 @@ class PowerConnection {
 		global $dbh;
 
 		$this->MakeSafe();
-                $sql="SELECT * FROM fac_PowerConnection WHERE DeviceID=$this->DeviceID ORDER BY DeviceConnnumber ASC, PDUID, PDUPosition";
+    	$sql="SELECT * FROM fac_PowerConnection WHERE DeviceID=$this->DeviceID ORDER BY DeviceConnnumber ASC, PDUID, PDUPosition";
 
 		$connList=array();
 		foreach($dbh->query($sql) as $row){
@@ -549,7 +542,7 @@ class PowerDistribution {
 	function GetPDUbyCabinet(){
 		$this->MakeSafe();
 
-                $sql="SELECT * FROM fac_PowerDistribution WHERE CabinetID=$this->CabinetID;";
+		$sql="SELECT * FROM fac_PowerDistribution WHERE CabinetID=$this->CabinetID;";
 
 		$PDUList=array();
 		foreach($this->query($sql) as $PDURow){
@@ -659,7 +652,6 @@ class PowerDistribution {
 		// The result set should have no PDU's with blank IP Addresses or SNMP Community, so we can forge ahead with processing them all
 		
 		foreach($this->query($sql) as $row){
-                    if ($row["OID1"] || $row["OID2"] || $row["OID3"]) {
 			// If only one OID is used, the OID2 and OID3 should be blank, so no harm in just making one string
 			$OIDString = $row["OID1"] . " " . $row["OID2"] . " " . $row["OID3"];
 			
@@ -675,75 +667,35 @@ class PowerDistribution {
 			}
 			
 			if ( $usePHPSNMP ) {
-                            if($row["DiscretePowerForPorts"] != "" && $row["PowerOID"] != "") {
-                                $index = strpos($row["PowerOID"], "?");
-                                if ($index === FALSE) {
-                                    exit;
-                                }
-                                list($foreOID, $backOID) = sscanf($index, "%s?%s");
-                                // Build OID for every single Port
-                                for ($i=0;$i < $row["NumOutlets"];$i++) {
-                                    $portPower = sprintf("%s%s%s", $foreOID, "." . $i);
-                                    if ($backOID != "") {
-                                        $portPower = $portPower . $backOID;
-                                    }
-                                    switch ($row["SNMPVersion"]) {
-                                        case "1":
-                                            $foo = explode( " ", @snmpget( $row["IPAddress"], $Community, $portPower ));
-                                            break;
-                                        case "2c":
-                                            $foo = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $portPower ));
-                                            break;
-                                    }
-                                    $tmp = $foo;
-                                    // TODO: Handle data that is distributed over several OIDs
-                                    $watts = @$tmp[1];
-                                    // New table: fac_PowerPorts;
-                                    
-                                    $sql="INSERT INTO fac_PowerPorts SET PDUID={$row["PDUID"]}, Port=$i,"
-                                            . "Wattage=$watts, LastRead=now() ON 
-                                    DUPLICATE KEY UPDATE Wattage=$watts, LastRead=now();";
-                                    $this->exec($sql);
-			
-                                    $this->PDUID=$row["PDUID"];
-                                    $sql="UPDATE fac_PowerDistribution SET FirmwareVersion=\"".
-                                    $this->GetSmartCDUVersion()."\" WHERE PDUID=$this->PDUID;";
-                                    $this->exec($sql);
-                                }
-                                // Update Table with power usage
-                            } else {
-                                for ($i=1;$i<4;$i++) {
-                                    if ( $row["OID".$i] != "" ) {
-                                        switch($row["SNMPVersion"]) {
-                                            case "1":
-                                                // TODO: Accidently interchanged the commands. Gotta fix that.
-                                                $foo = explode( " ", @snmpget( $row["IPAddress"], $Community, $row["OID".$i] ));
-                                                break;
-                                            case "2c":
-                                                $foo = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $row["OID".$i] ));
-                                                break;
-                                        }
-                                        switch ($i) {
-                                            case 1: 
-                                                $tmp = $foo;
-                                                $pollValue1 = @$tmp[1];
-                                                break;
-                                            case 2: 
-                                                $tmp2 = $foo;
-                                                if (sizeof ($tmp2) > 0) {
-                                                $pollValue2= $tmp2[1];
-                                                }
-                                                break;
-                                            case 3:
-                                                $tmp3 = $foo;
-                                                if ( sizeof( $tmp3 ) > 0 ){
-                                                    $pollValue3 = $tmp3[1];
-                                                }
-                                                break;
-                                        }
-                                    }
-                                }
-                            }
+				if ( $row["SNMPVersion"] == "2c" ){
+					$tmp = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $row["OID1"] ));
+				}else{
+					$tmp = explode( " ", @snmpget( $row["IPAddress"], $Community, $row["OID1"] ));
+				}
+				
+				$pollValue1 = @$tmp[1];
+				
+				if ( $row["OID2"] != "" ) {
+					if ( $row["SNMPVersion"] == "2c" ){
+						$tmp2 = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $row["OID2"] ));
+					}else{
+						$tmp2 = explode( " ", @snmpget( $row["IPAddress"], $Community, $row["OID2"] ));
+					}
+					if ( sizeof( $tmp2 ) > 0 ){
+						$pollValue2 = $tmp2[1];
+					}
+				}
+				
+				if ( $row["OID3"] != "" ) {
+					if ( $row["SNMPVersion"] == "2c" ){
+						$tmp3 = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $row["OID3"] ));
+					}else{
+						$tmp3 = explode( " ", @snmpget( $row["IPAddress"], $Community, $row["OID3"] ));
+					}
+					if ( sizeof( $tmp3 ) > 0 ){
+						$pollValue3 = $tmp3[1];
+					}
+				}
 			} else {
 				$pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";
 				
@@ -789,12 +741,11 @@ class PowerDistribution {
 				DUPLICATE KEY UPDATE Wattage=$watts, LastRead=now();";
 			$this->exec($sql);
 			
-			$this->PDUID=$row["PDUID"];
+			$this->PDUID=$row["PDUID"];      
 			$sql="UPDATE fac_PowerDistribution SET FirmwareVersion=\"".
 				$this->GetSmartCDUVersion()."\" WHERE PDUID=$this->PDUID;";
 			$this->exec($sql);
-                    }
-                }
+		}
 	}
 	
 	function getATSStatus() {
@@ -1173,7 +1124,7 @@ class PanelSchedule {
 		 
 		$sched=array_fill( 1, $pan->NumberOfPoles, "<td>&nbsp;</td>" );
 
-        	$sql="SELECT * FROM fac_PanelSchedule WHERE PanelID=$this->PanelID ORDER BY PolePosition ASC;";
+		$sql="SELECT * FROM fac_PanelSchedule WHERE PanelID=$this->PanelID ORDER BY PolePosition ASC;";
 
 		foreach($dbh->query($sql) as $row){
 			$sched[$row["PolePosition"]]="<td rowspan={$row["NumPoles"]}>{$row["Label"]}</td>";
@@ -1216,8 +1167,6 @@ class PowerSource {
 	var $IPAddress;
 	var $Community;
 	var $LoadOID;
-	var $OID2;
-	var $OID3;
 	var $Capacity;
 
 	function MakeSafe(){
@@ -1227,8 +1176,6 @@ class PowerSource {
 		$this->IPAddress=sanitize($this->IPAddress);
 		$this->Community=sanitize($this->Community);
 		$this->LoadOID=sanitize($this->LoadOID);
-		$this->OID2=sanitize($this->OID2);
-		$this->OID3=sanitize($this->OID3);
 		$this->Capacity=intval($this->Capacity);
 	}
 
@@ -1237,8 +1184,6 @@ class PowerSource {
 		$this->IPAddress=stripslashes($this->IPAddress);
 		$this->Community=stripslashes($this->Community);
 		$this->LoadOID=stripslashes($this->LoadOID);
-		$this->OID2=stripslashes($this->OID2);
-		$this->OID3=stripslashes($this->OID3);
 	}
 
 	static function RowToObject($row){
@@ -1249,8 +1194,6 @@ class PowerSource {
 		$source->IPAddress=$row["IPAddress"];
 		$source->Community=$row["Community"];
 		$source->LoadOID=$row["LoadOID"];
-		$source->OID2=$row["OID2"];
-		$source->OID3=$row["OID3"];
 		$source->Capacity=$row["Capacity"];
 
 		$source->MakeDisplay();
@@ -1266,12 +1209,12 @@ class PowerSource {
 		$sql="INSERT INTO fac_PowerSource SET SourceName=\"$this->SourceName\", 
 			DataCenterID=$this->DataCenterID, IPAddress=\"$this->IPAddress\", 
 			Community=\"$this->Community\", LoadOID=\"$this->LoadOID\", 
-			OID2=\"$this->OID2\", OID3=\"$this->OID3\", Capacity=$this->Capacity;";
+			Capacity=$this->Capacity;";
 
 		if(!$dbh->exec($sql)){
 			return false;
 		}else{
-			$this->PowerSourceID = $dbh->lastInsertId();
+			$this->PowerSourceID = $dbh->lastInsertID();
 		}
 		
 		(class_exists('LogActions'))?LogActions::LogThis($this):'';
@@ -1290,7 +1233,7 @@ class PowerSource {
 		foreach( $ppList as $p ) {
 			$p->DeletePanel();
 		}
-                
+		
 		$sql="DELETE FROM fac_PowerSource WHERE PowerSourceID=$this->PowerSourceID;";
 		$dbh->exec($sql);
 
@@ -1309,8 +1252,7 @@ class PowerSource {
 		$sql="UPDATE fac_PowerSource SET SourceName=\"$this->SourceName\", 
 			DataCenterID=$this->DataCenterID, IPAddress=\"$this->IPAddress\", 
 			Community=\"$this->Community\", LoadOID=\"$this->LoadOID\", 
-			OID2=\"$this->OID2\", OID3=\"$this->OID3\", Capacity=$this->Capacity 
-			WHERE PowerSourceID=$this->PowerSourceID;";
+			Capacity=$this->Capacity WHERE PowerSourceID=$this->PowerSourceID;";
 
 		(class_exists('LogActions'))?LogActions::LogThis($this,$oldsource):'';
 		return $dbh->query($sql);
@@ -1335,7 +1277,7 @@ class PowerSource {
 		global $dbh;
 
 		$this->MakeSafe();
-                
+
 		$sql="SELECT * FROM fac_PowerSource ORDER BY SourceName ASC;";
 
 		$SourceList=array();
@@ -1349,7 +1291,7 @@ class PowerSource {
 	function GetSource(){
 		global $dbh;
 
-		$this->MakeSafe();             
+		$this->MakeSafe();
 
 		$sql="SELECT * FROM fac_PowerSource WHERE PowerSourceID=$this->PowerSourceID;";
 
