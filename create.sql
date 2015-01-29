@@ -834,6 +834,7 @@ DROP TABLE IF EXISTS fac_PowerPorts;
 CREATE TABLE fac_PowerPorts (
   PDUID int(11) NOT NULL,
   Port int(11),
+  Wattage int(11),
   LastRead datetime DEFAULT NULL, 
   PRIMARY KEY (PDUID, Port)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
