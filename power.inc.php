@@ -151,7 +151,7 @@ class CDUTemplate {
 			OID3=\"$this->OID3\", ATSStatusOID=\"$this->ATSStatusOID\", ATSDesiredResult=\"$this->ATSDesiredResult\",
 			ProcessingProfile=\"$this->ProcessingProfile\", 
 			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets,
-			DiscretePowerForPorts=$this->DiscretePowerForPorts, PowerOID=$this->PowerOID;";
+			DiscretePowerForPorts=$this->DiscretePowerForPorts, PowerOID='$this->PowerOID';";
 		
 		if(!$dbh->exec($sql)){
 			// A combination of this Mfg + Model already exists most likely
@@ -181,7 +181,7 @@ class CDUTemplate {
 			ProcessingProfile=\"$this->ProcessingProfile\", 
 			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets,
                         DiscretePowerForPorts=$this->DiscretePowerForPorts,
-                        PowerOID=$this->PowerOID WHERE TemplateID=$this->TemplateID;";
+                        PowerOID='$this->PowerOID' WHERE TemplateID=$this->TemplateID;";
 		
 		if(!$dbh->query($sql)){
                     echo "Error:" . print_r($dbh->errorinfo());
