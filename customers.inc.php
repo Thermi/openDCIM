@@ -313,8 +313,8 @@ class Department {
 
 		$sql="SELECT * FROM fac_Department WHERE DeptID=$this->DeptID;";
 
-		if($this->query($sql))
-			$row=$this->query->fetch()){
+		if($this->query($sql)) {
+			$row=$this->query->fetch();
 			foreach(Department::RowToObject($row) as $prop => $value){
 				$this->$prop=$value;
 			}
