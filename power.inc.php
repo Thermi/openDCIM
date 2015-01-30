@@ -714,8 +714,9 @@ class PowerDistribution {
 			if ( $usePHPSNMP ) {
                             // Use OID 1, 2 and 3
                             if($row["DiscretePowerForPorts"] != "") {
+                                // variable to store total port power usage in
+                                $totalUsage=0;
                                 // iterate over port range
-                                $ports = array();
                                 for($i=1;$i <= $row["NumOutlets"];$i++) {
                                     $data = array(
                                         "OID1" => "", 
@@ -804,6 +805,7 @@ class PowerDistribution {
                                     } else {
                                         $PORT=$i;
                                         $PDUID=$row["PDUID"];
+                                        $totalUsage+=$watts;
                                         // Execute Query
                                         $ret = $discretePowerForPortsINSERTStmt->execute(array($PDUID, $PORT, $watts, $watts));
                                         if ($ret === FALSE) {
@@ -813,6 +815,13 @@ class PowerDistribution {
                                             echo "---END---";
                                         }
                                     }
+                                }
+                                $sql="INSERT INTO fac_PDUStats SET PDUID={$row["PDUID"]}, Wattage=$totalUsage, LastRead=now() ON 
+				DUPLICATE KEY UPDATE Wattage=$totalUsage, LastRead=now();";
+                                $dbh->exec($sql);
+                                if ($dbh === false) {
+                                    printf("An error occured while updagint fac_PDUStats.\n");
+                                    print_r($dbh->errorInfo());
                                 }
                             }
                         } else {
