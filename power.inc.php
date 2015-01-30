@@ -10,6 +10,7 @@
 	Data Center Manager, and released under the GNU GPL.
 
 	Copyright (C) 2011 Scott A. Milliken
+        Copyright (C) 2015 Noel M. Kuntze
 
 	This program is free software:  you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published
@@ -809,7 +810,6 @@ class PowerDistribution {
                                         // Execute Query
                                         $ret = $discretePowerForPortsINSERTStmt->execute(array($PDUID, $PORT, $watts, $watts));
                                         if ($ret === FALSE) {
-                                            global $dbh;
                                             echo "Error while updating records: ";
                                             echo print_r($dbh->errorInfo());
                                             echo "---END---";
