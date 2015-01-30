@@ -43,7 +43,6 @@ class CDUTemplate {
 	var $Amperage;
 	var $NumOutlets;
         var $DiscretePowerForPorts;
-        var $PowerOID;
         
 	function MakeSafe(){
 		$validSNMPVersions=array(1,'2c');
@@ -69,7 +68,6 @@ class CDUTemplate {
 		$this->Amperage=intval($this->Amperage);
 		$this->NumOutlets=intval($this->NumOutlets);
                 $this->DiscretePowerForPorts=intval($this->DiscretePowerForPorts);
-                $this->PowerOID=sanitize($this->PowerOID);
 	}
 
 	function MakeDisplay(){
@@ -80,7 +78,6 @@ class CDUTemplate {
 		$this->OID3=stripslashes($this->OID3);
 		$this->ATSStatusOID=stripslashes($this->ATSStatusOID);
 		$this->ATSDesiredResult=stripslashes($this->ATSDesiredResult);
-                $this->PowerOID=stripslashes($this->PowerOID);
 	}
 
 	static function RowToObject($row){
@@ -103,7 +100,6 @@ class CDUTemplate {
 		$template->Amperage=$row["Amperage"];
 		$template->NumOutlets=$row["NumOutlets"];
                 $template->DiscretePowerForPorts=$row["DiscretePowerForPorts"];
-                $template->PowerOID=$row["PowerOID"];
 
 		$template->MakeDisplay();
 
@@ -152,7 +148,7 @@ class CDUTemplate {
 			OID3=\"$this->OID3\", ATSStatusOID=\"$this->ATSStatusOID\", ATSDesiredResult=\"$this->ATSDesiredResult\",
 			ProcessingProfile=\"$this->ProcessingProfile\", 
 			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets,
-			DiscretePowerForPorts=$this->DiscretePowerForPorts, PowerOID='$this->PowerOID';";
+			DiscretePowerForPorts=$this->DiscretePowerForPorts;";
 		
 		if(!$dbh->exec($sql)){
 			// A combination of this Mfg + Model already exists most likely
@@ -181,8 +177,8 @@ class CDUTemplate {
 			OID3=\"$this->OID3\", ATSStatusOID=\"$this->ATSStatusOID\", ATSDesiredResult=\"$this->ATSDesiredResult\",
 			ProcessingProfile=\"$this->ProcessingProfile\", 
 			Voltage=$this->Voltage, Amperage=$this->Amperage, NumOutlets=$this->NumOutlets,
-                        DiscretePowerForPorts=$this->DiscretePowerForPorts,
-                        PowerOID='$this->PowerOID' WHERE TemplateID=$this->TemplateID;";
+                        DiscretePowerForPorts=$this->DiscretePowerForPorts
+                        WHERE TemplateID=$this->TemplateID;";
 		
 		if(!$dbh->query($sql)){
                     echo "Error:" . print_r($dbh->errorinfo());
