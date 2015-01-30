@@ -163,7 +163,6 @@ CREATE TABLE fac_CDUTemplate (
   Amperage int(11) NOT NULL,
   NumOutlets int(11) NOT NULL,
   DiscretePowerForPorts int(1),
-  PowerOID varchar(80) NOT NULL,
   PRIMARY KEY (TemplateID),
   KEY ManufacturerID (ManufacturerID),
   UNIQUE KEY (ManufacturerID, Model)
