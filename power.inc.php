@@ -658,53 +658,62 @@ class PowerDistribution {
 		$config=new Config();
 		
 		$sql="SELECT PDUID, IPAddress, SNMPCommunity, SNMPVersion, Multiplier, OID1, 
-			OID2, OID3, ProcessingProfile, Voltage, PowerOID, DiscretePowerForPorts,
-                        NumOutlets
+			OID2, OID3, ProcessingProfile, Voltage, DiscretePowerForPorts,
+                        NumOutlets, b.VersionOID
                         FROM fac_PowerDistribution a, 
 			fac_CDUTemplate b WHERE a.TemplateID=b.TemplateID AND b.Managed=true 
 			AND IPAddress>'' AND SNMPCommunity>''";
 		
 		// The result set should have no PDU's with blank IP Addresses or SNMP Community, so we can forge ahead with processing them all
-		echo "Executed Query.";
                 $result = $this->query($sql);
 		foreach($result->fetchAll() as $row){
-                    echo "Got ROW.";
-                    if ($row["OID1"] || $row["OID2"] || $row["OID3"] || $row["PowerOID"]) {
+                    if ($row["OID1"] || $row["OID2"] || $row["OID3"]) {
 			// If only one OID is used, the OID2 and OID3 should be blank, so no harm in just making one string
-			$OIDString = $row["OID1"] . " " . $row["OID2"] . " " . $row["OID3"];
-			echo "Combined OIDs.";
+                        // TODO: Get rid of this nonesense
+			$OIDString = $row["OID1"] . " " . $row["OID2"] . " " . $row["OID3"];    
 			// Have to reset this every time, otherwise the exec() will append
 			unset($statsOutput);
 			$amps=0;
 			$watts=0;
-			
+			global $dbh;
 			if ( $row["SNMPCommunity"] == "" ) {
 				$Community = $config->ParameterArray["SNMPCommunity"];
 			} else {
 				$Community = $row["SNMPCommunity"];
 			}
-			
+			// prepare SQL statements
+                        $discretePowerForPortsINSERTStmt=$dbh->prepare("INSERT INTO fac_PowerPorts SET PDUID=?, Port=?,"
+                                                . "Wattage=?, LastRead=now() ON DUPLICATE KEY UPDATE Wattage=?, LastRead=now();");
+                        
+                        $updateFirmwareVersionStmt=$dbh->prepare("UPDATE fac_PowerDistribution SET FirmwareVersion=:FWVER WHERE PDUID=:PDUID");
+                        
+                        
 			if ( $usePHPSNMP ) {
-                            if($row["DiscretePowerForPorts"] != "" && $row["PowerOID"] != "") {
-                                $index = strpos($row["PowerOID"], "?");
+                            // Use OID 1, 2 and 3
+                            if($row["DiscretePowerForPorts"] != "") {
+                                $index = strpos($row["OID1"], "?");
                                 if ($index === FALSE) {
                                     echo "No ? found.";
-                                    exit;
+                                    break;
                                 }
-                               $foreOID=substr($row["PowerOID"], 0, $index);
+                                // TODO: Handle OID.?.OID
+                               $foreOID=substr($row["OID1"], 0, $index);
                                 // Build OID for every single Port
-                                for ($i=0;$i < $row["NumOutlets"];$i++) {
+                                for ($i=1;$i <= $row["NumOutlets"];$i++) {
                                     $portPower = sprintf("%s%s", $foreOID, $i);
                                     switch ($row["SNMPVersion"]) {
                                         case "1":
-                                            $foo = explode( " ", @snmpget( $row["IPAddress"], $Community, $portPower ));
+                                            // Get power usage
+                                            $power = explode( " ", snmpget( $row["IPAddress"], $Community, $portPower ));
+                                            $version = explode (" ", snmpget( $row["IPAddress"], $Community, $row["VersionOID"]));
                                             break;
                                         case "2c":
-                                            $foo = explode( " ", @snmp2_get( $row["IPAddress"], $Community, $portPower ));
+                                            // Get power usage
+                                            $power = explode( " ", snmp2_get( $row["IPAddress"], $Community, $portPower ));
+                                            $version = explode (" ", snmp2_get( $row["IPAddress"], $Community, $row["VersionOID"]));
                                             break;
                                     }
-                                    $tmp = $foo;
-                                    printf("TMP: %s\n", print_r($tmp));
+                                    $tmp = $power;
                                     // TODO: Handle data that is distributed over several OIDs
                                     // SNMP returns an array of the type and value. (INTEGER And the power usage
                                     // for our PowerOID. Because the type is always INTEGER, We don't need to look
@@ -714,11 +723,10 @@ class PowerDistribution {
                                     if ($watts =='') {
                                         printf("PDU didn't return a power value!\n");
                                     } else {
-                                        $sql="INSERT INTO fac_PowerPorts SET PDUID={$row["PDUID"]}, Port=$i,"
-                                                . "Wattage=$watts, LastRead=now() ON 
-                                        DUPLICATE KEY UPDATE Wattage=$watts, LastRead=now();";
-                                        printf("Executed SQL query: %s\n", $sql);
-                                        $ret = $this->exec($sql);
+                                        $PORT=$i;
+                                        $PDUID=$row["PDUID"];
+                                        // Execute Query
+                                        $ret = $discretePowerForPortsINSERTStmt->execute(array($PDUID, $PORT, $watts, $watts));
                                         if ($ret === FALSE) {
                                             global $dbh;
                                             echo "Error while updating records: ";
@@ -726,12 +734,23 @@ class PowerDistribution {
                                             echo "---END---";
                                         }
                                     }
-                                    $this->PDUID=$row["PDUID"];
-                                    $sql="UPDATE fac_PowerDistribution SET FirmwareVersion=\"".
-                                    $this->GetSmartCDUVersion()."\" WHERE PDUID=$this->PDUID;";
-                                    $this->exec($sql);
                                 }
-                                // Update Table with power usage
+                                if (isset($row["VersionOID"])) {
+                                    switch ($row["SNMPVersion"]) {
+                                        case "1":
+                                            // Get power usage
+                                            $version = explode (" ", snmpget( $row["IPAddress"], $Community, $row["VersionOID"]));
+                                            break;
+                                        case "2c":
+                                            // Get power usage
+                                            $version = explode (" ", snmp2_get( $row["IPAddress"], $Community, $row["VersionOID"]));
+                                            break;
+                                    }
+                                    $tmp2 = $version[1];
+                                    // Update table with new firmware version
+                                    $this->PDUID=$row["PDUID"];
+                                    $updateFirmwareVersionStmt->execute(array(':PDUID' => $this->PDUID, 'FWVER' => $tmp2));
+                                }
                             } else {
                                 for ($i=1;$i<4;$i++) {
                                     if ( $row["OID".$i] != "" ) {
@@ -747,7 +766,7 @@ class PowerDistribution {
                                         switch ($i) {
                                             case 1: 
                                                 $tmp = $foo;
-                                                $pollValue1 = @$tmp[1];
+                                                $pollValue1 = $tmp[1];
                                                 break;
                                             case 2: 
                                                 $tmp2 = $foo;
@@ -770,9 +789,9 @@ class PowerDistribution {
 				
 				exec( $pollCommand, $statsOutput );
 				
-				$pollValue1 = @$statsOutput[0];
-				$pollValue2 = @$statsOutput[1];
-				$pollValue3 = @$statsOutput[2];
+				$pollValue1 = $statsOutput[0];
+				$pollValue2 = $statsOutput[1];
+				$pollValue3 = $statsOutput[2];
 			}
 			
 			if($pollValue1 != ""){
