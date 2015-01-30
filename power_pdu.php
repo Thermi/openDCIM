@@ -593,18 +593,23 @@ echo '</div>
 		<div>',__("Output No."),'</div>
 		<div>',__("Device Name"),'</div>
 		<div>',__("Dev Input No"),'</div>
+                <div>',__("Power Usage"),'</div>
 	</div>';
-
+        // Get port usage 
+        $sql="SELECT * FROM fac_PowerPorts WHERE PDUID=$pdu->PDUID;";
+        global $dbh;
+        $result = $dbh->query($sql);
 	$portrights=array();
 	for($connNumber=1; $connNumber<$template->NumOutlets+1; $connNumber++){
+            $row=$result->fetch();
 		if(isset($connList[$connNumber])){
 			$connDev->DeviceID=$connList[$connNumber]->DeviceID;
 			$connDev->GetDevice();
 			$portrights[$connNumber]=($connDev->Rights=="Write")?true:$write;
-			print "	<div>\n		<div>$connNumber</div>\n		<div alt=\"{$connList[$connNumber]->DeviceID}\" data-device=\"{$connList[$connNumber]->DeviceID}\"><a href=\"devices.php?deviceid={$connList[$connNumber]->DeviceID}\">$connDev->Label</a></div>\n		<div data-input=\"{$connList[$connNumber]->DeviceConnNumber}\">{$connList[$connNumber]->DeviceConnNumber}</div>\n	</div>\n";
+                        print "	<div>\n		<div>$connNumber</div>\n		<div alt=\"{$connList[$connNumber]->DeviceID}\" data-device=\"{$connList[$connNumber]->DeviceID}\"><a href=\"devices.php?deviceid={$connList[$connNumber]->DeviceID}\">$connDev->Label</a></div>\n		<div data-input=\"{$connList[$connNumber]->DeviceConnNumber}\">{$connList[$connNumber]->DeviceConnNumber}</div>\n <div>{$row["wattage"]} </div>\n </div>\n";
 		}else{
 			$portrights[$connNumber]=$write;
-			print "	<div>\n		<div>$connNumber</div>\n		<div alt=\"\"></div>\n		<div></div>\n	</div>\n";
+			print "	<div>\n		<div>$connNumber</div>\n		<div alt=\"\"></div>\n		<div></div>\n <div>{$row["wattage"]} </div>\n	</div>\n";
 		}
 	}
 	
