@@ -312,9 +312,9 @@ class Department {
 		$this->MakeSafe();
 
 		$sql="SELECT * FROM fac_Department WHERE DeptID=$this->DeptID;";
-
-		if($this->query($sql)) {
-			$row=$this->query->fetch();
+                $ret=$this->query($sql);
+		if($ret != FALSE) {
+			$row=$ret->fetch();
 			foreach(Department::RowToObject($row) as $prop => $value){
 				$this->$prop=$value;
 			}
