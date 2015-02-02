@@ -641,248 +641,149 @@ class PowerDistribution {
 		return ($this->query($sql))?$this->GetLastReading():false;
 	}
 	
-	function UpdateStats(){
-		global $config;
-                
-		if(function_exists("snmpget")){
-			$usePHPSNMP=true;
-		}else{
-			$usePHPSNMP=false;
-		}
-		
-		$config=new Config();
-		
-		$sql="SELECT PDUID, IPAddress, SNMPCommunity, SNMPVersion, Multiplier, OID1, 
+	function UpdateStats() {
+        global $config;
+
+        if (function_exists("snmpget")) {
+            $usePHPSNMP = true;
+        } else {
+            $usePHPSNMP = false;
+        }
+
+        $config = new Config();
+
+        $sql = "SELECT PDUID, IPAddress, SNMPCommunity, SNMPVersion, Multiplier, OID1, 
 			OID2, OID3, ProcessingProfile, Voltage, DiscretePowerForPorts,
                         NumOutlets, b.VersionOID
                         FROM fac_PowerDistribution a, 
 			fac_CDUTemplate b WHERE a.TemplateID=b.TemplateID AND b.Managed=true 
 			AND IPAddress>'' AND SNMPCommunity>''";
-		
-		// The result set should have no PDU's with blank IP Addresses or SNMP Community, so we can forge ahead with processing them all
-                $result = $this->query($sql);
-		foreach($result->fetchAll() as $row){
-                    if ($row["OID1"] || $row["OID2"] || $row["OID3"]) {
-			// If only one OID is used, the OID2 and OID3 should be blank, so no harm in just making one string   
-			// Have to reset this every time, otherwise the exec() will append
-			unset($statsOutput);
-			$amps=0;
-			$watts=0;
-			global $dbh;
-			if ( $row["SNMPCommunity"] == "" ) {
-				$Community = $config->ParameterArray["SNMPCommunity"];
-			} else {
-				$Community = $row["SNMPCommunity"];
-			}
-			// prepare SQL statements
-                        $discretePowerForPortsINSERTStmt=$dbh->prepare("INSERT INTO fac_PowerPorts SET PDUID=?, Port=?,"
-                                                . "Wattage=?, LastRead=now() ON DUPLICATE KEY UPDATE Wattage=?, LastRead=now();");
-                        
-                        $updateFirmwareVersionStmt=$dbh->prepare("UPDATE fac_PowerDistribution SET FirmwareVersion=:FWVER WHERE PDUID=:PDUID;");
-                        if ($row["OID1"] != '') {
-                            $index = strpos($row["OID1"], "?");
-                            $foreOID1=substr($row["OID1"], 0, $index);
-                            $backOID1 = "";
-                                    
-                            if ($index != strlen($row["OID1"]-1)) {
-                                $backOID1=substr($row["OID1"], ($index+1));
-                            }
-                        }
-                        if ($row["OID2"] != '') {
-                            $index = strpos($row["OID2"], "?");
-                            $foreOID2=substr($row["OID2"], 0, $index);
-                            $backOID2 = "";
-                                    
-                            if ($index != strlen($row["OID2"]-1)) {
-                                $backOID2=substr($row["OID2"], ($index+1));
-                            }
-                        }
-                        if ($row["OID3"] != '') {
-                            $index = strpos($row["OID3"], "?");
-                            $foreOID3=substr($row["OID3"], 0, $index);
-                            $backOID3 = "";
-                                    
-                            if ($index != strlen($row["OID3"]-1)) {
-                                $backOID3=substr($row["OID3"], ($index+1));
-                            }
-                        }
-			if ( $usePHPSNMP ) {
-                            // Use OID 1, 2 and 3
-                            if($row["DiscretePowerForPorts"] != "") {
-                                // variable to store total port power usage in
-                                $totalUsage=0;
-                                // iterate over port range
-                                for($i=1;$i <= $row["NumOutlets"];$i++) {
-                                    $data = array(
-                                        "OID1" => "", 
-                                        "OID2" => "" , 
-                                        "OID3" => "");
-                                    if ($row["OID1"] != "") {
-                                        $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
-                                        switch ($row["SNMPVersion"]) {
-                                            case "1":
-                                                // Get power usage
-                                                $data["OID1"] = explode( " ", snmpget( $row["IPAddress"], $Community, $portOID1 ));
-                                                break;
-                                            case "2c":
-                                                // Get power usage
-                                                $data["OID1"] = explode( " ", snmp2_get( $row["IPAddress"], $Community, $portPower ));
-                                                break;
-                                        }
-                                    }
-                                    // OID2
-                                    if ($row["OID2"] != "") {
-                                        $portOID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
-                                        switch ($row["SNMPVersion"]) {
-                                            case "1":
-                                                // Get power usage
-                                                $data["OID2"] = explode( " ", snmpget( $row["IPAddress"], $Community, $portOID2 ));
-                                                break;
-                                            case "2c":
-                                                // Get power usage
-                                                $data["OID2"] = explode( " ", snmp2_get( $row["IPAddress"], $Community, $portOID2 ));
-                                                break;
-                                        }
-                                    }
-                                    // OID3
-                                    if ($row["OID3"] != "") {
-                                        $portOID3 = sprintf("%s%s%s", $foreOID3, $i, $backOID3);
-                                        switch ($row["SNMPVersion"]) {
-                                            case "1":
-                                                // Get power usage
-                                                $data["OID3"] = explode( " ", snmpget( $row["IPAddress"], $Community, $portOID3 ));
-                                                break;
-                                            case "2c":
-                                                // Get power usage
-                                                $data["OID3"] = explode( " ", snmp2_get( $row["IPAddress"], $Community, $portOID3 ));
-                                                break;
-                                        }
-                                    }
-                                    // Handle processing schemas
-                                    // TODO: Handle data that is distributed over several OIDs
-                                    // SNMP returns an array of the type and value. (INTEGER And the power usage
-                                    // for our PowerOID. Because the type is always INTEGER, We don't need to look
-                                    // at it and just take the second row.
-                                    // New table: fac_PowerPorts;
-                                    // Transform the array output of snmpget/snmp2_get to just the numerical value
-                                    if($data["OID1"] != "") {
-                                        $data["OID1"] = $data["OID1"][1];
-                                    }
-                                    if($data["OID2"] != "") {
-                                        $data["OID2"] = $data["OID2"][1];
-                                    }
-                                    if($data["OID3"] != "") {
-                                        $data["OID3"] = $data["OID3"][1];
-                                    }
-                                    switch ( $row["ProcessingProfile"] ) {
-					case "SingleOIDAmperes":
-						$amps=$data["OID1"]/$row["Multiplier"];
-						$watts=$amps * $row["Voltage"];
-						break;
-					case "Combine3OIDAmperes":
-						$amps=($data["OID1"] + $data["OID2"] + $data["OID3"]) / $row["Multiplier"];
-						$watts=$amps * $row["Voltage"];
-						break;
-					case "Convert3PhAmperes":
-						// OO does this next formula need another set of () to be clear?
-						$amps=($data["OID1"] + $data["OID2"] + $data["OID3"]) / $row["Multiplier"] / 3;
-						$watts=$amps * 1.732 * $row["Voltage"];
-						break;
-					case "Combine3OIDWatts":
-						$watts=($data["OID1"] + $data["OID2"] + $data["OID3"]) / $row["Multiplier"];
-						break;
-					default:
-						$watts=$data["OID1"]/$row["Multiplier"];
-						break;
-                                    }
-                                    if ($data["OID1"] =='') {
-                                        printf("PDU didn't return a power value!\n");
-                                    } else {
-                                        $PORT=$i;
-                                        $PDUID=$row["PDUID"];
-                                        $totalUsage+=$watts;
-                                        // Execute Query
-                                        $ret = $discretePowerForPortsINSERTStmt->execute(array($PDUID, $PORT, $watts, $watts));
-                                        if ($ret === FALSE) {
-                                            echo "Error while updating records: ";
-                                            echo print_r($dbh->errorInfo());
-                                            echo "---END---";
-                                        }
-                                    }
+
+        // The result set should have no PDU's with blank IP Addresses or SNMP Community, so we can forge ahead with processing them all
+        $result = $this->query($sql);
+        foreach ($result->fetchAll() as $row) {
+            if ($row["OID1"] || $row["OID2"] || $row["OID3"]) {
+                // If only one OID is used, the OID2 and OID3 should be blank, so no harm in just making one string   
+                // Have to reset this every time, otherwise the exec() will append
+                unset($statsOutput);
+                $amps = 0;
+                $watts = 0;
+                global $dbh;
+                if ($row["SNMPCommunity"] == "") {
+                    $Community = $config->ParameterArray["SNMPCommunity"];
+                } else {
+                    $Community = $row["SNMPCommunity"];
+                }
+                // prepare SQL statements
+                $discretePowerForPortsINSERTStmt = $dbh->prepare("INSERT INTO fac_PowerPorts SET PDUID=?, Port=?,"
+                        . "Wattage=?, LastRead=now() ON DUPLICATE KEY UPDATE Wattage=?, LastRead=now();");
+
+                $updateFirmwareVersionStmt = $dbh->prepare("UPDATE fac_PowerDistribution SET FirmwareVersion=:FWVER WHERE PDUID=:PDUID;");
+                if ($row["OID1"] != '') {
+                    $index = strpos($row["OID1"], "?");
+                    $foreOID1 = substr($row["OID1"], 0, $index);
+                    $backOID1 = "";
+
+                    if ($index != strlen($row["OID1"] - 1)) {
+                        $backOID1 = substr($row["OID1"], ($index + 1));
+                    }
+                }
+                if ($row["OID2"] != '') {
+                    $index = strpos($row["OID2"], "?");
+                    $foreOID2 = substr($row["OID2"], 0, $index);
+                    $backOID2 = "";
+
+                    if ($index != strlen($row["OID2"] - 1)) {
+                        $backOID2 = substr($row["OID2"], ($index + 1));
+                    }
+                }
+                if ($row["OID3"] != '') {
+                    $index = strpos($row["OID3"], "?");
+                    $foreOID3 = substr($row["OID3"], 0, $index);
+                    $backOID3 = "";
+
+                    if ($index != strlen($row["OID3"] - 1)) {
+                        $backOID3 = substr($row["OID3"], ($index + 1));
+                    }
+                }
+                // Use OID 1, 2 and 3
+                if ($row["DiscretePowerForPorts"] != "") {
+                    // variable to store total port power usage in
+                    $totalUsage = 0;
+                    // iterate over port range
+                    for ($i = 1; $i <= $row["NumOutlets"]; $i++) {
+                        $data = array(
+                            "OID1" => "",
+                            "OID2" => "",
+                            "OID3" => "");
+                        if ($row["OID1"] != "") {
+                            $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
+                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID1);
+                                if ($ret === FALSE) {
+                                    printf ("(Error while processing OID1 for port %s\n", $i);
+                                    break;
                                 }
-                                $sql="INSERT INTO fac_PDUStats SET PDUID={$row["PDUID"]}, Wattage=$totalUsage, LastRead=now() ON 
-				DUPLICATE KEY UPDATE Wattage=$totalUsage, LastRead=now();";
-                                $dbh->exec($sql);
-                                if ($dbh === false) {
-                                    printf("An error occured while updagint fac_PDUStats.\n");
-                                    print_r($dbh->errorInfo());
+                                $data["OID1"] = $ret;
+                        }
+                        // OID2
+                        if ($row["OID2"] != "") {
+                            $portOID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
+                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID2);
+                                if ($ret === FALSE) {
+                                    printf ("(Error while processing OID2 for port %s\n", $i);
+                                    break;
                                 }
-                            }
+                                $data["OID2"] = $ret;
+                        }
+                        // OID3
+                        if ($row["OID3"] != "") {
+                            $portOID3 = sprintf("%s%s%s", $foreOID3, $i, $backOID3);
+                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID3);
+                                if ($ret === FALSE) {
+                                    printf ("(Error while processing OID3 for port %s\n", $i);
+                                    break;
+                                }
+                                $data["OID3"] = $ret;
+                        }
+                        if ($data["OID1"] != "") {
+                            $data["OID1"] = $data["OID1"][1];
+                        }
+                        if ($data["OID2"] != "") {
+                            $data["OID2"] = $data["OID2"][1];
+                        }
+                        if ($data["OID3"] != "") {
+                            $data["OID3"] = $data["OID3"][1];
+                        }
+                        $ret = HandleProcessingProfiles($row["ProcessingProfile"], $row["Multiplier"], $row["Voltage"], $data["OID1"], $data["OID2"], $data["OID3"]);
+                        if ($ret === FALSE || $ret == '') {
+                            printf("Something went wrong during processing of the power values.\n");
                         } else {
-                            $pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";
-				
-                            exec( $pollCommand, $statsOutput );
-			
-                            $pollValue1 = $statsOutput[0];
-                            $pollValue2 = $statsOutput[1];
-                            $pollValue3 = $statsOutput[2];
-                            if($pollValue1 != ""){
-                                // The multiplier should be an int but no telling what voodoo the db might cause
-                                $pollValue1=intval($pollValue1);
-                                $pollValue2=@intval($pollValue2);
-                                $pollValue3=@intval($pollValue3);
-                                $row["Multiplier"]=floatval($row["Multiplier"]);
-                                $row["Voltage"]=intval($row["Voltage"]);    
-                                switch ( $row["ProcessingProfile"] ) {
-                                    case "SingleOIDAmperes":
-        				$amps=$pollValue1/$row["Multiplier"];
-                                        $watts=$amps * $row["Voltage"];
-                                        break;
-                                    case "Combine3OIDAmperes":
-					$amps=($pollValue1 + $pollValue2 + $pollValue3) / $row["Multiplier"];
-					$watts=$amps * $row["Voltage"];
-					break;
-                                    case "Convert3PhAmperes":
-					// OO does this next formula need another set of () to be clear?
-					$amps=($pollValue1 + $pollValue2 + $pollValue3) / $row["Multiplier"] / 3;
-					$watts=$amps * 1.732 * $row["Voltage"];
-					break;
-                                    case "Combine3OIDWatts":
-					$watts=($pollValue1 + $pollValue2 + $pollValue3) / $row["Multiplier"];
-					break;
-                                    default:
-					$watts=$pollValue1 / $row["Multiplier"];
-					break;
-                                    }
-                            } else {
-                                break;
+                            $PORT = $i;
+                            $PDUID = $row["PDUID"];
+                            $watts = $ret;
+                            $totalUsage+=$watts;
+                            // Execute Query
+                            $ret = $discretePowerForPortsINSERTStmt->execute(array($PDUID, $PORT, $watts, $watts));
+                            if ($ret === FALSE) {
+                                echo "Error while updating records: ";
+                                echo print_r($dbh->errorInfo());
+                                echo "---END---";
                             }
-			
-                            $sql="INSERT INTO fac_PDUStats SET PDUID={$row["PDUID"]}, Wattage=$watts, LastRead=now() ON 
-				DUPLICATE KEY UPDATE Wattage=$watts, LastRead=now();";
-                            $this->exec($sql);
-                            if (isset($row["VersionOID"])) {
-                                switch ($row["SNMPVersion"]) {
-                                        case "1":
-                                        // Get power usage
-                                        $version = explode (" ", snmpget( $row["IPAddress"], $Community, $row["VersionOID"]));
-                                        break;
-                                    case "2c":
-                                        // Get power usage
-                                        $version = explode (" ", snmp2_get( $row["IPAddress"], $Community, $row["VersionOID"]));
-                                        break;
-                                }
-                                $tmp2 = $version[1];
-                                // Update table with new firmware version
-                            $this->PDUID=$row["PDUID"];
-                            $updateFirmwareVersionStmt->execute(array(':PDUID' => $this->PDUID, 'FWVER' => $tmp2));
                         }
+                    }
+                    $sql = "INSERT INTO fac_PDUStats SET PDUID={$row["PDUID"]}, Wattage=$totalUsage, LastRead=now() ON 
+				DUPLICATE KEY UPDATE Wattage=$totalUsage, LastRead=now();";
+                    $dbh->exec($sql);
+                    if ($dbh === false) {
+                        printf("An error occured while updating fac_PDUStats.\n");
+                        print_r($dbh->errorInfo());
                     }
                 }
             }
         }
-	
-	function getATSStatus() {
+    }
+
+    function getATSStatus() {
 		global $config;
 		
 		if ( ! function_exists( "snmpget" ) ) {
