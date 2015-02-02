@@ -1059,6 +1059,72 @@ class PowerDistribution {
 			return true;
 		}
 	}
+        /* 
+         * This function gets the OID values via SNMP from the specified host.
+         * It can also handle several OIDs.
+         */
+        function GetSNMPObject ($IP, $COMMUNITY, $SNMPVERSION, $OID) {
+            // check if we can use PHP native functions to get the OIDs.
+            global $config;
+            if(function_exists("snmpget")){
+		$usePHPSNMP=true;
+            }else{
+		$usePHPSNMP=false;
+            }
+            $data='';
+            if ($usePHPSNMP) {
+                switch ($SNMPVERSION) {
+                    case "1":
+                        // Get power usage
+                        $data = snmpget( $IP, $$COMMUNITY, $OID );
+                        break;
+                    case "2c":
+                        // Get power usage
+                        $data = snmp2_get( $IP, $$COMMUNITY, $OID );
+                        break;
+                    default: 
+                        // unhandled type. Abort.
+                        return false;
+                }
+                $data = explode (" ", $data);
+                $data = $data[1];
+            } else {
+                $pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";	
+                exec( $pollCommand, $statsOutput );	
+                $data = $statsOutput[0];
+            }
+            if ($data === FALSE || $data =='') {
+                return false;
+            }
+            return $data;
+        }
+        /*
+         * This function handles processing of Processing Profiles
+         */
+        function HandleProcessingProfiles($ProcessingProfile, $Multiplier, $Voltage, $OID1, $OID2, $OID3) {
+            switch ($ProcessingProfile) {
+                case "SingleOIDAmperes":
+                    $amps = $OID1 / $Multiplier;
+                    $watts = $amps * $Voltage;
+                    break;
+                case "Combine3OIDAmperes":
+                    $amps = ($OID1 + $OID2 + $OID3 / $Multiplier);
+                    $watts = $amps * $Voltage;
+                    break;
+                case "Convert3PhAmperes":
+                    // OO does this next formula need another set of () to be clear?
+                    $amps = ($OID1 + $OID2 + $OID3) / $Multiplier / 3;
+                    $watts = $amps * 1.732 * $Voltage;
+                    break;
+                case "Combine3OIDWatts":
+                    $watts = ($OID1 + $OID2 + $OID3) / $Multiplier;
+                    break;
+                default:
+                    $watts = $OID1 / $Multiplier;
+                    break;
+        }
+        return $watts;
+    }
 }
 
 class PowerPanel {
