@@ -653,7 +653,7 @@ class PowerDistribution {
 		$usePHPSNMP=false;
             }
             $data='';
-            if ($usePHPSNMP) {
+            if ($usePHPSNMP) {;
                 switch ($SNMPVERSION) {
                     case "1":
                         // Get power usage
@@ -666,12 +666,13 @@ class PowerDistribution {
                     default: 
                         // unhandled type. Abort.
                         return false;
+                        break;
                 }
                 $data = explode (" ", $data);
                 $data = $data[1];
             } else {
                 $pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";	
-                exec( $pollCommand, $statsOutput );	
+                exec( $pollCommand, $statsOutput );
                 $data = $statsOutput[0];
             }
             if ($data === FALSE || $data =='') {
@@ -689,7 +690,7 @@ class PowerDistribution {
                     $watts = $amps * $Voltage;
                     break;
                 case "Combine3OIDAmperes":
-                    $amps = ($OID1 + $OID2 + $OID3 / $Multiplier);
+                    $amps = ($OID1 + $OID2 + $OID3)/ $Multiplier;
                     $watts = $amps * $Voltage;
                     break;
                 case "Convert3PhAmperes":
@@ -701,7 +702,7 @@ class PowerDistribution {
                     $watts = ($OID1 + $OID2 + $OID3) / $Multiplier;
                     break;
                 default:
-                    $watts = $OID1 / $Multiplier;
+                    $watts = ($OID1 / $Multiplier);
                     break;
         }
         return $watts;
@@ -781,6 +782,7 @@ class PowerDistribution {
                             "OID1" => "",
                             "OID2" => "",
                             "OID3" => "");
+                        // OID1
                         if ($row["OID1"] != "") {
                             $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
                             $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
@@ -813,17 +815,8 @@ class PowerDistribution {
                             printf("OID3: %s\n", $ret);
                             $data["OID3"] = $ret;
                         }
-                        if ($data["OID1"] != "") {
-                            $data["OID1"] = $data["OID1"][1];
-                        }
-                        if ($data["OID2"] != "") {
-                            $data["OID2"] = $data["OID2"][1];
-                        }
-                        if ($data["OID3"] != "") {
-                            $data["OID3"] = $data["OID3"][1];
-                        }
                         $ret = PowerDistribution::HandleProcessingProfiles($row["ProcessingProfile"], $row["Multiplier"], $row["Voltage"], $data["OID1"], $data["OID2"], $data["OID3"]);
-                        if ($ret === FALSE || $ret == '') {
+                        if ($ret === FALSE) {
                             printf("Something went wrong during processing of the power values.\n");
                         } else {
                             $PORT = $i;
