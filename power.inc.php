@@ -787,7 +787,7 @@ class PowerDistribution {
                             $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
                             $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
                             if ($ret === FALSE) {
-                                printf("(Error while processing OID1 for port %s\n", $i);
+                                printf("Error while processing OID1 for port %s\n", $i);
                                 break;
                             }
                             printf("OID1: %s\n", $ret);
