@@ -779,7 +779,7 @@ class PowerDistribution {
                         print_r($dbh->errorInfo());
                     }
                     if (isset($row["VersionOID"])) {
-                        $ret = GetSNMPObject();
+                        $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $row["VersionOID"]);
                         if ($ret === FALSE) {
                             printf("Something went wrong during getting the value of the firmware version OID.\n");
                             break;
