@@ -646,9 +646,7 @@ class PowerDistribution {
 		
 		if(function_exists("snmpget")){
 			$usePHPSNMP=true;
-                        echo "Use PHPSNMP: TRUE";
 		}else{
-                        echo "Use PHPSNMP: FALSE";
 			$usePHPSNMP=false;
 		}
 		
