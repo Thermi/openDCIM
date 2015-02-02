@@ -643,7 +643,7 @@ class PowerDistribution {
 	
 	function UpdateStats(){
 		global $config;
-		
+                
 		if(function_exists("snmpget")){
 			$usePHPSNMP=true;
 		}else{
@@ -1047,6 +1047,14 @@ class PowerDistribution {
 			// Something went south and this didn't delete.
 			return false;
 		}else{
+			(class_exists('LogActions'))?LogActions::LogThis($this):'';
+			return true;
+		}
+                // delete columns from fac_PowerPorts
+                $sql="DELETE FROM fac_PowerPorts WHERE PDUID=$this->PDUID;";
+                if(!$this->exec($sql)) {
+                    return false;
+                }else{
 			(class_exists('LogActions'))?LogActions::LogThis($this):'';
 			return true;
 		}
