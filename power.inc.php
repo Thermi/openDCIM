@@ -718,32 +718,32 @@ class PowerDistribution {
                             "OID3" => "");
                         if ($row["OID1"] != "") {
                             $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
-                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID1);
-                                if ($ret === FALSE) {
-                                    printf ("(Error while processing OID1 for port %s\n", $i);
-                                    break;
-                                }
-                                $data["OID1"] = $ret;
+                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
+                            if ($ret === FALSE) {
+                                printf("(Error while processing OID1 for port %s\n", $i);
+                                break;
+                            }
+                            $data["OID1"] = $ret;
                         }
                         // OID2
                         if ($row["OID2"] != "") {
                             $portOID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
-                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID2);
-                                if ($ret === FALSE) {
-                                    printf ("(Error while processing OID2 for port %s\n", $i);
-                                    break;
-                                }
-                                $data["OID2"] = $ret;
+                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID2);
+                            if ($ret === FALSE) {
+                                printf("(Error while processing OID2 for port %s\n", $i);
+                                break;
+                            }
+                            $data["OID2"] = $ret;
                         }
                         // OID3
                         if ($row["OID3"] != "") {
                             $portOID3 = sprintf("%s%s%s", $foreOID3, $i, $backOID3);
-                                $ret = GetSNMPObject($row["IPAddress"], $Community , $row["SNMPVersion"], $portOID3);
-                                if ($ret === FALSE) {
-                                    printf ("(Error while processing OID3 for port %s\n", $i);
-                                    break;
-                                }
-                                $data["OID3"] = $ret;
+                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID3);
+                            if ($ret === FALSE) {
+                                printf("(Error while processing OID3 for port %s\n", $i);
+                                break;
+                            }
+                            $data["OID3"] = $ret;
                         }
                         if ($data["OID1"] != "") {
                             $data["OID1"] = $data["OID1"][1];
@@ -777,6 +777,17 @@ class PowerDistribution {
                     if ($dbh === false) {
                         printf("An error occured while updating fac_PDUStats.\n");
                         print_r($dbh->errorInfo());
+                    }
+                    if (isset($row["VersionOID"])) {
+                        $ret = GetSNMPObject();
+                        if ($ret === FALSE) {
+                            printf("Something went wrong during getting the value of the firmware version OID.\n");
+                            break;
+                        }
+                        $FWVER = $ret[1];
+                        // Update table with new firmware version
+                        $this->PDUID = $row["PDUID"];
+                        $updateFirmwareVersionStmt->execute(array(':PDUID' => $this->PDUID, 'FWVER' => $FWVER));
                     }
                 }
             }
@@ -1027,6 +1038,7 @@ class PowerDistribution {
         return $watts;
     }
 }
+
 
 class PowerPanel {
 	/* PowerPanel:	PowerPanel(s) are the parents of PowerDistribution (power strips) and the children
