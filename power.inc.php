@@ -640,7 +640,72 @@ class PowerDistribution {
 		(class_exists('LogActions'))?LogActions::LogThis($this,$oldpdu):'';
 		return ($this->query($sql))?$this->GetLastReading():false;
 	}
-	
+        /* 
+         * This function gets the OID values via SNMP from the specified host.
+         * It can also handle several OIDs.
+         */
+        function GetSNMPObject ($IP, $COMMUNITY, $SNMPVERSION, $OID) {
+            // check if we can use PHP native functions to get the OIDs.
+            global $config;
+            if(function_exists("snmpget")){
+		$usePHPSNMP=true;
+            }else{
+		$usePHPSNMP=false;
+            }
+            $data='';
+            if ($usePHPSNMP) {
+                switch ($SNMPVERSION) {
+                    case "1":
+                        // Get power usage
+                        $data = snmpget( $IP, $COMMUNITY, $OID );
+                        break;
+                    case "2c":
+                        // Get power usage
+                        $data = snmp2_get( $IP, $COMMUNITY, $OID );
+                        break;
+                    default: 
+                        // unhandled type. Abort.
+                        return false;
+                }
+                $data = explode (" ", $data);
+                $data = $data[1];
+            } else {
+                $pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";	
+                exec( $pollCommand, $statsOutput );	
+                $data = $statsOutput[0];
+            }
+            if ($data === FALSE || $data =='') {
+                return false;
+            }
+            return $data;
+        }
+        /*
+         * This function handles processing of Processing Profiles
+         */
+        function HandleProcessingProfiles($ProcessingProfile, $Multiplier, $Voltage, $OID1, $OID2, $OID3) {
+            switch ($ProcessingProfile) {
+                case "SingleOIDAmperes":
+                    $amps = $OID1 / $Multiplier;
+                    $watts = $amps * $Voltage;
+                    break;
+                case "Combine3OIDAmperes":
+                    $amps = ($OID1 + $OID2 + $OID3 / $Multiplier);
+                    $watts = $amps * $Voltage;
+                    break;
+                case "Convert3PhAmperes":
+                    // OO does this next formula need another set of () to be clear?
+                    $amps = ($OID1 + $OID2 + $OID3) / $Multiplier / 3;
+                    $watts = $amps * 1.732 * $Voltage;
+                    break;
+                case "Combine3OIDWatts":
+                    $watts = ($OID1 + $OID2 + $OID3) / $Multiplier;
+                    break;
+                default:
+                    $watts = $OID1 / $Multiplier;
+                    break;
+        }
+        return $watts;
+    }
 	function UpdateStats() {
         global $config;
 
@@ -718,31 +783,34 @@ class PowerDistribution {
                             "OID3" => "");
                         if ($row["OID1"] != "") {
                             $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
-                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
+                            $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
                             if ($ret === FALSE) {
                                 printf("(Error while processing OID1 for port %s\n", $i);
                                 break;
                             }
+                            printf("OID1: %s\n", $ret);
                             $data["OID1"] = $ret;
                         }
                         // OID2
                         if ($row["OID2"] != "") {
                             $portOID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
-                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID2);
+                            $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID2);
                             if ($ret === FALSE) {
                                 printf("(Error while processing OID2 for port %s\n", $i);
                                 break;
                             }
+                            printf("OID2: %s\n", $ret);
                             $data["OID2"] = $ret;
                         }
                         // OID3
                         if ($row["OID3"] != "") {
                             $portOID3 = sprintf("%s%s%s", $foreOID3, $i, $backOID3);
-                            $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID3);
+                            $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID3);
                             if ($ret === FALSE) {
                                 printf("(Error while processing OID3 for port %s\n", $i);
                                 break;
                             }
+                            printf("OID3: %s\n", $ret);
                             $data["OID3"] = $ret;
                         }
                         if ($data["OID1"] != "") {
@@ -754,7 +822,7 @@ class PowerDistribution {
                         if ($data["OID3"] != "") {
                             $data["OID3"] = $data["OID3"][1];
                         }
-                        $ret = HandleProcessingProfiles($row["ProcessingProfile"], $row["Multiplier"], $row["Voltage"], $data["OID1"], $data["OID2"], $data["OID3"]);
+                        $ret = PowerDistribution::HandleProcessingProfiles($row["ProcessingProfile"], $row["Multiplier"], $row["Voltage"], $data["OID1"], $data["OID2"], $data["OID3"]);
                         if ($ret === FALSE || $ret == '') {
                             printf("Something went wrong during processing of the power values.\n");
                         } else {
@@ -779,7 +847,7 @@ class PowerDistribution {
                         print_r($dbh->errorInfo());
                     }
                     if (isset($row["VersionOID"])) {
-                        $ret = GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $row["VersionOID"]);
+                        $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $row["VersionOID"]);
                         if ($ret === FALSE) {
                             printf("Something went wrong during getting the value of the firmware version OID.\n");
                             break;
@@ -971,72 +1039,6 @@ class PowerDistribution {
 			return true;
 		}
 	}
-        /* 
-         * This function gets the OID values via SNMP from the specified host.
-         * It can also handle several OIDs.
-         */
-        function GetSNMPObject ($IP, $COMMUNITY, $SNMPVERSION, $OID) {
-            // check if we can use PHP native functions to get the OIDs.
-            global $config;
-            if(function_exists("snmpget")){
-		$usePHPSNMP=true;
-            }else{
-		$usePHPSNMP=false;
-            }
-            $data='';
-            if ($usePHPSNMP) {
-                switch ($SNMPVERSION) {
-                    case "1":
-                        // Get power usage
-                        $data = snmpget( $IP, $$COMMUNITY, $OID );
-                        break;
-                    case "2c":
-                        // Get power usage
-                        $data = snmp2_get( $IP, $$COMMUNITY, $OID );
-                        break;
-                    default: 
-                        // unhandled type. Abort.
-                        return false;
-                }
-                $data = explode (" ", $data);
-                $data = $data[1];
-            } else {
-                $pollCommand="{$config->ParameterArray["snmpget"]} -v {$row["SNMPVersion"]} -t 0.5 -r 2 -c $Community {$row["IPAddress"]} $OIDString | {$config->ParameterArray["cut"]} -d: -f4";	
-                exec( $pollCommand, $statsOutput );	
-                $data = $statsOutput[0];
-            }
-            if ($data === FALSE || $data =='') {
-                return false;
-            }
-            return $data;
-        }
-        /*
-         * This function handles processing of Processing Profiles
-         */
-        function HandleProcessingProfiles($ProcessingProfile, $Multiplier, $Voltage, $OID1, $OID2, $OID3) {
-            switch ($ProcessingProfile) {
-                case "SingleOIDAmperes":
-                    $amps = $OID1 / $Multiplier;
-                    $watts = $amps * $Voltage;
-                    break;
-                case "Combine3OIDAmperes":
-                    $amps = ($OID1 + $OID2 + $OID3 / $Multiplier);
-                    $watts = $amps * $Voltage;
-                    break;
-                case "Convert3PhAmperes":
-                    // OO does this next formula need another set of () to be clear?
-                    $amps = ($OID1 + $OID2 + $OID3) / $Multiplier / 3;
-                    $watts = $amps * 1.732 * $Voltage;
-                    break;
-                case "Combine3OIDWatts":
-                    $watts = ($OID1 + $OID2 + $OID3) / $Multiplier;
-                    break;
-                default:
-                    $watts = $OID1 / $Multiplier;
-                    break;
-        }
-        return $watts;
-    }
 }
 
 
