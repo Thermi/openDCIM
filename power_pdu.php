@@ -155,7 +155,7 @@
                             $OID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
                             $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID2);
                             if ($ret === FALSE) {
-                                printf("<b>Error while processing OID2 for port %s!</b>\n", $i);
+                                printf("<b>Error while processing OID2 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                                 break;
                             }
                             $data["OID2"] = $ret;
@@ -166,7 +166,7 @@
                             $OID3 = sprintf("%s%s%s", $foreOID3, $index, $backOID3);
                             $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID3);
                             if ($ret === FALSE) {
-                                printf("<b>Error while processing OID3 for port %s!</b>\n", $i);
+                                printf("<b>Error while processing OID3 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                                 break;
                             }
                             $data["OID3"] = $ret;
@@ -184,20 +184,20 @@
                     if($template->OID1) {
                         $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID1);
                         if ($ret === FALSE) {
-                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                            printf("<b>Error while processing OID1 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                         }
                     }
                     if($template->OID2) {
                         $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID2);
                         if ($ret === FALSE) {
-                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                            printf("<b>Error while processing OID2 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                         }
                         
                     }
                     if($template->OID3) {
                         $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID3);
                         if ($ret === FALSE) {
-                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                            printf("<b>Error while processing OID3 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                         }
                     }
                     $watts = PowerDistribution::HandleProcessingProfiles($template->ProcessingProfile, $template->Multiplier,$template->Voltage, $data["OID1"], $data["OID2"], $data["OID3"]);
