@@ -794,7 +794,7 @@ class PowerDistribution {
                             $portOID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
                             $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID1);
                             if ($ret === FALSE) {
-                                printf("Error while processing OID1 for port %s\n", $i);
+                                printf("Error while processing OID1 for port %s on IP %s\n", $i, $row["IPAddress"]);
                                 break;
                             }
                             $data["OID1"] = $ret;
@@ -804,7 +804,7 @@ class PowerDistribution {
                             $portOID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
                             $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID2);
                             if ($ret === FALSE) {
-                                printf("(Error while processing OID2 for port %s\n", $i);
+                                printf("(Error while processing OID2 for port %s on IP %s\n", $i, $row["IPAddress"]);
                                 break;
                             }
                             $data["OID2"] = $ret;
@@ -814,7 +814,7 @@ class PowerDistribution {
                             $portOID3 = sprintf("%s%s%s", $foreOID3, $i, $backOID3);
                             $ret = PowerDistribution::GetSNMPObject($row["IPAddress"], $Community, $row["SNMPVersion"], $portOID3);
                             if ($ret === FALSE) {
-                                printf("(Error while processing OID3 for port %s\n", $i);
+                                printf("(Error while processing OID3 for port %s on IP %s\n", $i, $row["IPAddress"]);
                                 break;
                             }
                             $data["OID3"] = $ret;
