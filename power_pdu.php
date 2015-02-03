@@ -101,86 +101,109 @@
 			print "<p>".__("The OID for Firmware Version did not return a value.  Please check your MIB table.")."</p>\n";
 		}
 		
-		if ( ! function_exists( "snmpget" ) ) {
-			$OIDString=$template->OID1." ".$template->OID2." ".$template->OID3;
-			$pollCommand=sprintf( "%s -v %s -c %s %s %s | %s -d: -f4", $config->ParameterArray["snmpget"], $template->SNMPVersion, $Community, $pdu->IPAddress, $OIDString, $config->ParameterArray["cut"] );
-			
-			exec($pollCommand,$statsOutput);
-			
-			$result1 = @$statsOutput[0];
-			$result2 = @$statsOutput[1];
-			$result3 = @$statsOutput[2];
-		} else {
-			if ( $template->SNMPVersion == "2c" ) {
-				$tmp1 = explode( " ", snmp2_get( $pdu->IPAddress, $Community, $template->OID1 ));
-				$result1 = $tmp1[1];
-				
-				if ( $template->OID2 != "" ) {
-					$tmp2 = explode( " ", snmp2_get( $pdu->IPAddress, $Community, $template->OID2 ));
-					$result2 = $tmp2[1];
-				}
-				
-				if ( $template->OID3 != "" ) {
-					$tmp3 = explode( " ", snmp2_get( $pdu->IPAddress, $Community, $template->OID3 ));
-					$result3 = $tmp3[1];
-				}
-			} else {
-				$tmp1 = explode( " ", snmpget( $pdu->IPAddress, $Community, $template->OID1 ));
-				$result1 = $tmp1[1];
-				
-				if ( $template->OID2 != "" ) {
-					$tmp2 = explode( " ", snmpget( $pdu->IPAddress, $Community, $template->OID2 ));
-					$result2 = $tmp2[1];
-				}
-				
-				if ( $template->OID3 != "" ) {
-					$tmp3 = explode( " ", snmpget( $pdu->IPAddress, $Community, $template->OID3 ));
-					$result3 = $tmp3[1];
-				}
-			}
-		}
-		
-		if($result1!=""){
-			printf( "<p>%s %s.  %s</p>\n", __("OID1 returned a value of"), $result1, __("Please check to see if it makes sense.") );
-		}else{
-			print "<p>".__("OID1 did not return any data.  Please check your MIB table.")."</p>\n";
-		}
-		
-		if((strlen($template->OID2) >0)&&(strlen($result2) >0)){
-			printf( "<p>%s %s.  %s</p>\n", __("OID2 returned a value of"), $result2, __("Please check to see if it makes sense.") );
-		}elseif(strlen($template->OID2) >0){
-			print "<p>".__("OID2 did not return any data.  Please check your MIB table.")."</p>\n";
-		}
-
-		if((strlen($template->OID3) >0)&&(strlen($result3) >0)){
-			printf( "<p>%s %s.  %s</p>\n", __("OID3 returned a value of"), $result3, __("Please check to see if it makes sense.") );
-		}elseif(strlen($template->OID3)){
-			print "<p>".__("OID3 did not return any data.  Please check your MIB table.")."</p>\n";
-		}
-		
-		switch($template->ProcessingProfile){
-			case "SingleOIDAmperes":
-				$amps=intval($result1)/floatval($template->Multiplier);
-				$watts=$amps*intval($template->Voltage);
-				break;
-			case "Combine3OIDAmperes":
-				$amps=(intval($result1)+intval($result2)+intval($result3))/floatval($template->Multiplier);
-				$watts=$amps*intval($template->Voltage);
-				break;
-			case "Convert3PhAmperes":
-				$amps=(intval($result1)+intval($result2)+intval($result3))/floatval($template->Multiplier)/3;
-				$watts=$amps*1.732*intval($template->Voltage);
-				break;
-			case "Combine3OIDWatts":
-				$watts=(intval($result1)+intval($result2)+intval($result3))/floatval($template->Multiplier);
-				break;
-			default:
-				$watts=intval($result1)/floatval($template->Multiplier);
-				break;
-		}
-		
-		printf("<p>%s %.2f kW</p>", __("Resulting kW from this test is"),$watts/1000);
-
+                // Check if ports are to be queried for power by their own
+                if ($template->DiscretePowerForPorts == 1) {
+                    $OID1template = $template->OID1;
+                    if ($OID1template != '') {
+                        $index = strpos($OID1template, "?");
+                        $foreOID1 = substr($OID1template, 0, $index);
+                        $backOID1 = "";
+                        if ($index != strlen($OID1template - 1)) {
+                            $backOID1 = substr($OID1template, ($index + 1));
+                        }
+                    }
+                    $OID2template = $template->OID2;
+                    if ($OID2template != '') {
+                        $index = strpos($OID2template, "?");
+                        $foreOID2 = substr($OID2template, 0, $index);
+                        $backOID2 = "";
+                        if ($index != strlen($OID2template - 1)) {
+                            $backOID2 = substr($OID2template, ($index + 1));
+                        }
+                    }
+                    $OID3template = $template->OID3;
+                    if ($OID3template != '') {
+                        $index = strpos($OID3template, "?");
+                        $foreOID3 = substr($OID3template, 0, $index);
+                        $backOID3 = "";
+                        if ($index != strlen($OID3template - 1)) {
+                            $backOID3 = substr($OID3template, ($index + 1));
+                        }
+                    }
+                    $TotalPowerUsage=0;
+                    for ($i=1;$i<=$template->NumOutlets;$i++) {
+                        $data = array(
+                            "OID1" => "",
+                            "OID2" => "",
+                            "OID3" => ""
+                        );
+                        // query OID1
+                        if ($OID1template != '') {
+                            // build OID1
+                            $OID1 = sprintf("%s%s%s", $foreOID1, $i, $backOID1);
+                            // query OID1
+                            $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID1);
+                            if ($ret === FALSE) {
+                                printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                                break;
+                            }
+                            $data["OID1"] = $ret;
+                        }
+                        // query OID2
+                        if ($OID2template != '') {
+                            // build OID2
+                            $OID2 = sprintf("%s%s%s", $foreOID2, $i, $backOID2);
+                            $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID2);
+                            if ($ret === FALSE) {
+                                printf("<b>Error while processing OID2 for port %s!</b>\n", $i);
+                                break;
+                            }
+                            $data["OID2"] = $ret;
+                        }
+                        // query OID3
+                        if ($OID3template != '') {
+                            // build OID3
+                            $OID3 = sprintf("%s%s%s", $foreOID3, $index, $backOID3);
+                            $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID3);
+                            if ($ret === FALSE) {
+                                printf("<b>Error while processing OID3 for port %s!</b>\n", $i);
+                                break;
+                            }
+                            $data["OID3"] = $ret;
+                        }
+                        $ret = PowerDistribution::HandleProcessingProfiles($template->ProcessingProfile, $template->Multiplier,$template->Voltage, $data["OID1"], $data["OID2"], $data["OID3"]);
+                        if ($ret === FALSE) {
+                            printf("Something went wrong during processing of the power values.\n");
+                            break;
+                        }
+                        printf("Power usage of port <b>%s</b>: %s<br>",$i, $ret);
+                        $TotalPowerUsage+=$ret;
+                    }
+                    printf("<p>%s %.2f kW</p>", __("Resulting kW from this test is"),$TotalPowerUsage/1000);
+                } else {
+                    if($template->OID1) {
+                        $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID1);
+                        if ($ret === FALSE) {
+                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                        }
+                    }
+                    if($template->OID2) {
+                        $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID2);
+                        if ($ret === FALSE) {
+                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                        }
+                        
+                    }
+                    if($template->OID3) {
+                        $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID3);
+                        if ($ret === FALSE) {
+                            printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                        }
+                    }
+                    $watts = PowerDistribution::HandleProcessingProfiles($template->ProcessingProfile, $template->Multiplier,$template->Voltage, $data["OID1"], $data["OID2"], $data["OID3"]);
+                    printf("<p>%s %.2f kW</p>", __("Resulting kW from this test is"),$watts/1000);
+                    
+                }
 		echo '	</fieldset></div>';
 		exit;
 	}
