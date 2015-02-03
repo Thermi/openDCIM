@@ -144,7 +144,7 @@
                             // query OID1
                             $ret = PowerDistribution::GetSNMPObject($pdu->IPAddress, $Community, $template->SNMPVersion, $OID1);
                             if ($ret === FALSE) {
-                                printf("<b>Error while processing OID1 for port %s!</b>\n", $i);
+                                printf("<b>Error while processing OID1 for port %s on CDU with IP %s!</b>\n", $i, $pdu->IPAddress);
                                 break;
                             }
                             $data["OID1"] = $ret;
