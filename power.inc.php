@@ -668,6 +668,9 @@ class PowerDistribution {
                         return false;
                         break;
                 }
+                if ($data === FALSE) {
+                    return FALSE;
+                }
                 $data = explode (" ", $data);
                 $data = $data[1];
             } else {
