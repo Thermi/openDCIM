@@ -704,6 +704,10 @@ class PowerDistribution {
                 case "SingleOIDWatts":
                     $watts = ($OID1 / $Multiplier);
                     break;
+                default:
+                    printf("Unknown processing profile: %s!\n", $ProcessingProfile);
+                    $watts=false;
+                    break;
         }
         return $watts;
     }
