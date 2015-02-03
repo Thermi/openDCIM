@@ -701,7 +701,7 @@ class PowerDistribution {
                 case "Combine3OIDWatts":
                     $watts = ($OID1 + $OID2 + $OID3) / $Multiplier;
                     break;
-                default:
+                case "SingleOIDWatts":
                     $watts = ($OID1 / $Multiplier);
                     break;
         }
