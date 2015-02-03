@@ -790,7 +790,6 @@ class PowerDistribution {
                                 printf("Error while processing OID1 for port %s\n", $i);
                                 break;
                             }
-                            printf("OID1: %s\n", $ret);
                             $data["OID1"] = $ret;
                         }
                         // OID2
@@ -801,7 +800,6 @@ class PowerDistribution {
                                 printf("(Error while processing OID2 for port %s\n", $i);
                                 break;
                             }
-                            printf("OID2: %s\n", $ret);
                             $data["OID2"] = $ret;
                         }
                         // OID3
@@ -812,7 +810,6 @@ class PowerDistribution {
                                 printf("(Error while processing OID3 for port %s\n", $i);
                                 break;
                             }
-                            printf("OID3: %s\n", $ret);
                             $data["OID3"] = $ret;
                         }
                         $ret = PowerDistribution::HandleProcessingProfiles($row["ProcessingProfile"], $row["Multiplier"], $row["Voltage"], $data["OID1"], $data["OID2"], $data["OID3"]);
