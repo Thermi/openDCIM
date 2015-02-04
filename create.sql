@@ -483,9 +483,9 @@ CREATE TABLE fac_PowerDistribution (
   PanelPole2 int(11) NOT NULL,
   Notes varchar(320) NOT NULL,
   Fuse varchar(80) NOT NULL,
-  UplinkedToPDU int(1) NOT NULL,
-  UplinkedPDUID int(11) NOT NULL
-  UplinkedPDUPort int(11) NOT NULL
+  UplinkedToPDU int(1) NOT NULL
+  UplinkedPDUID int(11) NOT NULL,
+  UplinkedPDUPort int(11) NOT NULL,
   PRIMARY KEY (PDUID),
   KEY CabinetID (CabinetID),
   KEY PanelID (PanelID)
