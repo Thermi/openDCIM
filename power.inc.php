@@ -400,7 +400,9 @@ class PowerDistribution {
 	var $FailSafe;
 	var $PanelID2;
 	var $PanelPole2;
-
+        var $Fuse;
+        var $Notes;
+        
 	function MakeSafe(){
 		$this->PDUID=intval($this->PDUID);
 		$this->Label=sanitize($this->Label);
@@ -416,6 +418,8 @@ class PowerDistribution {
 		$this->FailSafe=intval($this->FailSafe);
 		$this->PanelID2=intval($this->PanelID2);
 		$this->PanelPole2=intval($this->PanelPole2);
+                $this->Fuse=sanitize($this->Fuse);
+                $this->Notes=sanitize($this->Notes);
 	}
 
 	function MakeDisplay(){
@@ -441,7 +445,8 @@ class PowerDistribution {
 		$PDU->FailSafe=$row["FailSafe"];
 		$PDU->PanelID2=$row["PanelID2"];
 		$PDU->PanelPole2=$row["PanelPole2"];
-
+                $PDU->Fuse=$row["Fuse"];
+                $PDU->Notes=$row["Notes"];
 		$PDU->MakeDisplay();
 
 		return $PDU;
@@ -467,7 +472,8 @@ class PowerDistribution {
 			IPAddress=\"$this->IPAddress\", SNMPCommunity=\"$this->SNMPCommunity\", 
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
-			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2;";
+			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\";";                        ;
 
 		if($this->exec($sql)){
 			$this->PDUID=$dbh->lastInsertId();
@@ -495,7 +501,8 @@ class PowerDistribution {
 			IPAddress=\"$this->IPAddress\", SNMPCommunity=\"$this->SNMPCommunity\", 
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
-			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2
+			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\"
 			WHERE PDUID=$this->PDUID;";
 
 		(class_exists('LogActions'))?LogActions::LogThis($this,$oldpdu):'';
