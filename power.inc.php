@@ -395,6 +395,7 @@ class PowerDistribution {
 	var $FirmwareVersion;
   	var $PanelID;
 	var $BreakerSize;
+        var $NoRotaryCurrent;
 	var $PanelPole;
 	var $InputAmperage;
 	var $FailSafe;
@@ -413,6 +414,7 @@ class PowerDistribution {
 		$this->FirmwareVersion=sanitize($this->FirmwareVersion);
 		$this->PanelID=intval($this->PanelID);
 		$this->BreakerSize=intval($this->BreakerSize);
+                $this->NoRotaryCurrent=intval($this->NoRotaryCurrent);
 		$this->PanelPole=intval($this->PanelPole);
 		$this->InputAmperage=intval($this->InputAmperage);
 		$this->FailSafe=intval($this->FailSafe);
@@ -440,6 +442,7 @@ class PowerDistribution {
 		$PDU->FirmwareVersion=$row["FirmwareVersion"];
 		$PDU->PanelID=$row["PanelID"];
 		$PDU->BreakerSize=$row["BreakerSize"];
+                $PDU->NoRotaryCurrent=$row["NoRotaryCurrent"];
 		$PDU->PanelPole=$row["PanelPole"];
 		$PDU->InputAmperage=$row["InputAmperage"];
 		$PDU->FailSafe=$row["FailSafe"];
@@ -473,7 +476,7 @@ class PowerDistribution {
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
 			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
-                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\";";                        ;
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent;";
 
 		if($this->exec($sql)){
 			$this->PDUID=$dbh->lastInsertId();
@@ -502,7 +505,7 @@ class PowerDistribution {
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
 			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
-                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\"
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent
 			WHERE PDUID=$this->PDUID;";
 
 		(class_exists('LogActions'))?LogActions::LogThis($this,$oldpdu):'';
