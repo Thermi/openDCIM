@@ -475,6 +475,7 @@ CREATE TABLE fac_PowerDistribution (
   FirmwareVersion varchar(40) NOT NULL,
   PanelID int(11) NOT NULL,
   BreakerSize int(11) NOT NULL,
+  NoRotaryCurrent int(1) NOT NULL,
   PanelPole int(11) NOT NULL,
   InputAmperage int(11) NOT NULL,
   FailSafe tinyint(1) NOT NULL,
