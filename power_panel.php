@@ -30,20 +30,20 @@
 	// Set a default panel voltage based upon the configuration screen
 	$panel->PanelVoltage=$config->ParameterArray["DefaultPanelVoltage"];
   
-	if(isset($_POST["action"])&&(($_POST["action"]=="Create")||($_POST["action"]=="Update"))){
-		$panel->PanelID=$_POST["panelid"];
-		$panel->PowerSourceID=$_POST["powersourceid"];
-		$panel->PanelLabel=trim($_POST["panellabel"]);
-		$panel->NumberOfPoles=$_POST["numberofpoles"];
-		$panel->MainBreakerSize=$_POST["mainbreakersize"];
-		$panel->PanelVoltage=$_POST["panelvoltage"];
-		$panel->NumberScheme=$_POST["numberscheme"];
+	if(isset($_POST["action"]) && !isset($_POST["panelid"]) &&(($_POST["action"]=="Create") ||($_POST["action"]=="Update"))){
+                $panel->PanelID=$_POST["panelid"];
+                $panel->PowerSourceID=$_POST["powersourceid"];
+                $panel->PanelLabel=trim($_POST["panellabel"]);
+                $panel->NumberOfPoles=$_POST["numberofpoles"];
+                $panel->MainBreakerSize=$_POST["mainbreakersize"];
+                $panel->PanelVoltage=$_POST["panelvoltage"];
+                $panel->NumberScheme=$_POST["numberscheme"];
 		
-		if($_POST["action"]=="Create"){
-			$panel->CreatePanel();
-		} else {
-			$panel->UpdatePanel();
-		}
+                if($_POST["action"]=="Create"){
+                    $panel->CreatePanel();
+                } else {
+                    $panel->UpdatePanel();
+                }
 	}
 
 	if(isset($_REQUEST["panelid"])&&($_REQUEST["panelid"] >0)){
@@ -99,7 +99,7 @@ echo '	</select>
 <div>
    <div><label for="powersourceid">',__("Power Source"),'</label></div>
    <div><select name="powersourceid" id="powersourceid">';
-
+        
 	foreach($psList as $psRow){
 		print "<option value=\"$psRow->PowerSourceID\"";
 		if($psRow->PowerSourceID == $panel->PowerSourceID){
