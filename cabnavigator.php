@@ -447,7 +447,7 @@ $body.='<div id="infopanel">
 	}
 	$body.='	<fieldset name="pdu">
 		<legend>'.__("Power Distribution").'</legend>';
-
+        $body.='        <legend>'.__("The max power values have a 0.8 security divisor applied!").'</legend>';
 	foreach($PDUList as $PDUdev){
 		$lastreading=$PDUdev->GetLastReading();
 		$pduDraw=($lastreading)?$lastreading->Wattage:0;
