@@ -248,6 +248,7 @@
 		$pdu->SNMPCommunity=$_REQUEST['snmpcommunity'];
 		$pdu->PanelID=$_REQUEST['panelid'];
 		$pdu->BreakerSize=$_REQUEST['breakersize'];
+                $pdu->NoRotaryCurrent=isset($_REQUEST['norotarycurrent'])?1:0;
 		$pdu->PanelPole=$_REQUEST['panelpole'];
 		$pdu->InputAmperage=$_REQUEST['inputamperage'];
                 $pdu->Notes=$_REQUEST['notes'];
@@ -283,7 +284,7 @@
 	$lastreading=$pdu->GetLastReading();
 	$LastWattage=($lastreading)?$lastreading->Wattage:0;
 	$LastRead=($lastreading)?strftime("%c",strtotime($lastreading->LastRead)):"Never";	
-
+        $NoRotaryCurrent=($pdu->NoRotaryCurrent)?"checked":"";
 	$cab->CabinetID=$pdu->CabinetID;
 	$cab->GetCabinet();
 
@@ -504,6 +505,10 @@ echo '	</div>
 
 echo '	</select>
   </div>
+</div>
+<div>
+    <div><label for="norotarycurrent">',__("No rotary current is used"),' </label></div>
+    <div><input type="checkbox" name="norotarycurrent" id="norotarycurrent" ', $NoRotaryCurrent, ' "></div>
 </div>
 <div>
   <div><label for="panelpole">',__("Panel Pole Number"),'</label></div>
