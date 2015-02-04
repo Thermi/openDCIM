@@ -454,14 +454,32 @@ $body.='<div id="infopanel">
 
 		$pan->PanelID=$PDUdev->PanelID;
 		$pan->GetPanel();
-
-		if($PDUdev->BreakerSize==1){
-			$maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage / 1.732;
-		}elseif($PDUdev->BreakerSize==2){
-			$maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage;
-		}else{
-			$maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage * 1.732;
-		}
+                switch($PDUdev->BreakerSize) {
+                    case 1:
+                        if($PDUdev->NoRotaryCurrent == 1) {
+                            // One phase is directly linked to ground
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage;
+                        } else {
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage / 1.732;
+                        }
+                        break;
+                    case 2:
+                        if($PDUdev->NoRotaryCurrent == 1) {
+                            // two phases are directly linked to ground
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage * 2;
+                        } else {
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage;
+                        }
+                        break;
+                    case 3:
+                        if ($PDUdev->NoRotaryCurrent == 1) {
+                            // 3 phases are directly linked to ground
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage * 3;
+                        } else {
+                            $maxDraw=$PDUdev->InputAmperage * $pan->PanelVoltage * 1.732;
+                        }
+                        break;
+                }
 
 		// De-rate all breakers to 80% sustained load
 		$maxDraw*=0.8;
