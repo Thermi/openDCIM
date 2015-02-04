@@ -513,6 +513,8 @@ CREATE TABLE fac_PowerSource (
   IPAddress varchar(254) NOT NULL,
   Community varchar(40) NOT NULL,
   LoadOID varchar(80) NOT NULL,
+  OID2 varchar(80) NOT NULL,
+  OID3 varchar(80) NOT NULL,
   Capacity int(11) NOT NULL,
   PRIMARY KEY (PowerSourceID),
   KEY DataCenterID (DataCenterID)
