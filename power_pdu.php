@@ -512,7 +512,7 @@ echo '	</select>
 </div>
 <div>
   <div><label for="panelpole">',__("Panel Pole Number"),'</label></div>
-  <div><input type="text" name="panelpole" id="panelpole" size=5 value="',$pdu->PanelPole,'"></div>
+  <div><input type="text" name="panelpole" id="panelpole" size=1 value="',$pdu->PanelPole,'"></div>
 </div>';
 
 if($pdu->BreakerSize>1) {
@@ -581,7 +581,7 @@ echo '
 echo '
 <div>
     <div>',__("Fuse"),': </div>
-    <div><input type="text" name="fuse" id="fuse" size=5 value="',$pdu->Fuse,'"></div>
+    <div><input type="text" name="fuse" id="fuse" size=10 value="',$pdu->Fuse,'"></div>
 </div>';
 
 echo '
