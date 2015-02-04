@@ -250,6 +250,8 @@
 		$pdu->BreakerSize=$_REQUEST['breakersize'];
 		$pdu->PanelPole=$_REQUEST['panelpole'];
 		$pdu->InputAmperage=$_REQUEST['inputamperage'];
+                $pdu->Notes=$_REQUEST['notes'];
+                $pdu->Fuse=$_REQUEST['fuse'];
 		// If failsafe is unset clear auto transfer switch panel information
 		if(isset($_REQUEST['failsafe'])){
 			$pdu->FailSafe=1;
@@ -561,8 +563,21 @@ echo '
 <div>
 	<div>',__("Last Update"),':</div>
 	<div id="lastread">',$LastRead,'</div>
-</div>';
+</div>';         
 }
+
+// Notice field
+echo '
+<div>
+    <div>',__("Notes"),':</div>
+    <div><textarea name="notes" id="notes" cols="40" rows="8">',$pdu->Notes,'</textarea></div>
+</div>';
+// Fuse number
+echo '
+<div>
+    <div>',__("Fuse"),': </div>
+    <div><input type="text" name="fuse" id="fuse" size=5 value="',$pdu->Fuse,'"></div>
+</div>';
 
 echo '
 <div class="caption">
