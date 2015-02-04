@@ -403,6 +403,9 @@ class PowerDistribution {
 	var $PanelPole2;
         var $Fuse;
         var $Notes;
+        var $UplinkedToPDU;
+        var $UplinkedPDUID;
+        var $UplinkedPDUPort;
         
 	function MakeSafe(){
 		$this->PDUID=intval($this->PDUID);
@@ -422,6 +425,9 @@ class PowerDistribution {
 		$this->PanelPole2=intval($this->PanelPole2);
                 $this->Fuse=sanitize($this->Fuse);
                 $this->Notes=sanitize($this->Notes);
+                $this->UplinkedToPDU=intval($this->UplinkedToPDU);
+                $this->UplinkedPDUID=intval($this->UplinkedPDUID);
+                $this->UplinkedPDUPort=intval($this->UplinkedPDUPort);
 	}
 
 	function MakeDisplay(){
@@ -450,8 +456,10 @@ class PowerDistribution {
 		$PDU->PanelPole2=$row["PanelPole2"];
                 $PDU->Fuse=$row["Fuse"];
                 $PDU->Notes=$row["Notes"];
+                $PDU->UplinkedToPDU=$row["UplinkedToPDU"];
+                $PDU->UplinkedPDUID=$row["UplinkedPDUID"];
+                $PDU->UplinkedPDUPort=$row["UplinkedPDUPort"];
 		$PDU->MakeDisplay();
-
 		return $PDU;
 	}
 	
@@ -476,7 +484,9 @@ class PowerDistribution {
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
 			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
-                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent;";
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent,
+                        UplinkedToPDU=$this->UplinkedToPDU, UplinkedPDUID=$this->UplinkedPDUID,
+                        UplinkedPDUPOrt=$this->UplinkedPDUPort;";
 
 		if($this->exec($sql)){
 			$this->PDUID=$dbh->lastInsertId();
@@ -505,7 +515,9 @@ class PowerDistribution {
 			PanelID=$this->PanelID, BreakerSize=$this->BreakerSize, 
 			PanelPole=$this->PanelPole, InputAmperage=$this->InputAmperage, 
 			FailSafe=$this->FailSafe, PanelID2=$this->PanelID2, PanelPole2=$this->PanelPole2,
-                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent
+                        Notes=\"$this->Notes\", Fuse=\"$this->Fuse\", NoRotaryCurrent=$this->NoRotaryCurrent,
+                        UplinkedToPDU=$this->UplinkedToPDU, UplinkedPDUID=$this->UplinkedPDUID,
+                        UplinkedPDUPOrt=$this->UplinkedPDUPort
 			WHERE PDUID=$this->PDUID;";
 
 		(class_exists('LogActions'))?LogActions::LogThis($this,$oldpdu):'';
@@ -1387,7 +1399,7 @@ class PowerSource {
 		$oldsource->PowerSourceID=$this->PowerSourceID;
 		$oldsource->GetSource();
 
-		$sql="UPDATE fac_PowerSource SET SourceName=\"$this->SourceName\", 
+		$sql="UPDATE fac_PowerSource SET SourceName=\"$this->SourceName\",
 			DataCenterID=$this->DataCenterID, IPAddress=\"$this->IPAddress\", 
 			Community=\"$this->Community\", LoadOID=\"$this->LoadOID\", 
 			OID2=\"$this->OID2\", OID3=\"$this->OID3\", Capacity=$this->Capacity 
