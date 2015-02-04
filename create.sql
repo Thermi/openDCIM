@@ -480,6 +480,8 @@ CREATE TABLE fac_PowerDistribution (
   FailSafe tinyint(1) NOT NULL,
   PanelID2 int(11) NOT NULL,
   PanelPole2 int(11) NOT NULL,
+  Notes varchar(320) NOT NULL,
+  Fuse varchar(80) NOT NULL,
   PRIMARY KEY (PDUID),
   KEY CabinetID (CabinetID),
   KEY PanelID (PanelID)
